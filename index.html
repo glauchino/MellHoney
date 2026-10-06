@@ -25,7 +25,7 @@
       background: var(--bg);
       color: var(--text);
       margin: 0;
-      padding: 16px 16px 80px 16px;
+      padding: 16px 16px 100px 16px;
     }
     h1, h2, h3 { margin: 0 0 12px 0; }
     .header { margin-bottom: 20px; }
@@ -204,13 +204,26 @@
       border-top: 1px solid #f1f5f9;
     }
     .btn-sm {
-      padding: 5px 10px;
+      padding: 6px 12px;
       border-radius: 6px;
       font-size: 12px;
       border: 1px solid var(--border);
       background: white;
       cursor: pointer;
     }
+
+    /* Sessão de Backup */
+    .backup-section {
+      margin-top: 30px;
+      padding: 16px;
+      background: #f1f5f9;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      text-align: center;
+    }
+    .backup-section h3 { font-size: 15px; margin-bottom: 6px; }
+    .backup-section p { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+    .backup-actions { display: flex; gap: 8px; justify-content: center; }
 
     /* Modal de foto */
     .modal {
@@ -261,9 +274,7 @@
       <!-- Seção detalhada de itens -->
       <div id="detailedSection">
         <label>Itens Entregues</label>
-        <div id="itemsContainer">
-          <!-- Linhas de produtos inseridas dinamicamente -->
-        </div>
+        <div id="itemsContainer"></div>
         <button type="button" class="btn-add-item" onclick="addItemRow()">+ Adicionar Produto</button>
       </div>
 
@@ -291,13 +302,24 @@
   <!-- Lista de Registros -->
   <div id="deliveriesList"></div>
 
+  <!-- Área de Backup e Segurança -->
+  <div class="backup-section">
+    <h3>Segurança e Backup</h3>
+    <p>Guarde seus dados no Google Drive ou envie para outro celular.</p>
+    <div class="backup-actions">
+      <button class="btn-sm" onclick="exportBackupData()">💾 Fazer Backup (Drive)</button>
+      <button class="btn-sm" onclick="document.getElementById('importFileInput').click()">📥 Restaurar Backup</button>
+      <input type="file" id="importFileInput" accept=".json" style="display:none;" onchange="importBackupData(event)">
+    </div>
+  </div>
+
   <!-- Visualizador de Imagem Grande -->
   <div class="modal" id="imageModal" onclick="this.style.display='none'">
     <img id="modalImg" src="" alt="Nota Ampliada">
   </div>
 
   <script>
-    // --- Banco de Dados IndexedDB (armazenamento persistente local no iPhone) ---
+    // --- Banco de Dados IndexedDB ---
     let db;
     const DB_NAME = "SaboariaDeliveriesDB";
     const STORE_NAME = "deliveries";
@@ -394,7 +416,7 @@
       container.appendChild(row);
     }
 
-    // Leitura e compressão simples da foto para caber no armazenamento local
+    // Compressão de foto
     document.getElementById("photoInput").addEventListener("change", function(e) {
       const file = e.target.files[0];
       if (!file) {
@@ -459,7 +481,7 @@
         items: items,
         total: total,
         image: currentBase64Image,
-        status: "pending" // "pending" ou "paid"
+        status: "pending"
       };
 
       await addDelivery(deliveryRecord);
@@ -473,7 +495,6 @@
       renderDeliveries();
     });
 
-    // Alternar status pago/pendente
     async function toggleStatus(id) {
       const records = await getAllDeliveries();
       const item = records.find(r => r.id === id);
@@ -496,7 +517,7 @@
       document.getElementById("imageModal").style.display = "flex";
     }
 
-    // Renderização da lista
+    // Renderização
     async function renderDeliveries() {
       const deliveries = await getAllDeliveries();
       deliveries.sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -505,7 +526,6 @@
       const listContainer = document.getElementById("deliveriesList");
       listContainer.innerHTML = "";
 
-      // Atualiza select de lojas
       const storeSelect = document.getElementById("filterStore");
       const currentSelected = storeSelect.value;
       const stores = [...new Set(deliveries.map(d => d.store))];
@@ -532,7 +552,7 @@
           itemsHtml = `<div><strong>Itens:</strong> ${d.items.map(i => `${i.qty}x${i.desc} (R$ ${(i.subtotal).toFixed(2)})`).join(", ")}</div>
                        <div style="margin-top:4px; font-weight:700; color:var(--text);">Total: R$ ${d.total.toFixed(2)}</div>`;
         } else {
-          itemsHtml = `<div style="font-style: italic;">Entrega gravada somente por foto (valores a calcular pela foto).</div>`;
+          itemsHtml = `<div style="font-style: italic;">Entrega gravada somente por foto.</div>`;
         }
 
         card.innerHTML = `
@@ -564,7 +584,7 @@
       document.getElementById("sumPhotoCount").innerText = `${pendingPhotoOnlyCount} nota(s) em aberto registradas só por foto`;
     }
 
-    // Copiar relatório formatado em texto para WhatsApp
+    // Copiar relatório
     async function exportStoreReport() {
       const deliveries = await getAllDeliveries();
       const filterStore = document.getElementById("filterStore").value;
@@ -593,7 +613,7 @@
           text += ` Subtotal: R$ ${d.total.toFixed(2)}\n\n`;
           totalCalculado += d.total;
         } else {
-          text += ` • Nota registrada por foto (conferência física pendente)\n\n`;
+          text += ` • Nota registrada por foto (conferência pendente)\n\n`;
           fotosManuais++;
         }
       });
@@ -611,7 +631,79 @@
       });
     }
 
-    // Inicialização padrão
+    // --- FUNÇÕES DE BACKUP E RESTAURAÇÃO (GOOGLE DRIVE / ICLOUD) ---
+    async function exportBackupData() {
+      const deliveries = await getAllDeliveries();
+      if (deliveries.length === 0) {
+        alert("Não há dados para exportar ainda.");
+        return;
+      }
+
+      const jsonStr = JSON.stringify(deliveries, null, 2);
+      const blob = new Blob([jsonStr], { type: "application/json" });
+      const fileName = `backup_entregas_saboaria_${new Date().toISOString().slice(0, 10)}.json`;
+
+      // Se o navegador suportar compartilhamento direto nativo (iOS Safari)
+      const file = new File([blob], fileName, { type: "application/json" });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({
+            files: [file],
+            title: "Backup Entregas Saboaria",
+            text: "Arquivo de backup das entregas e fotos."
+          });
+          return;
+        } catch (err) {
+          // Se o usuário cancelar a partilha nativa, segue para o download padrão
+        }
+      }
+
+      // Download comum de arquivo
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function importBackupData(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const importedData = JSON.parse(e.target.result);
+          if (!Array.isArray(importedData)) {
+            throw new Error("Formato inválido.");
+          }
+
+          if (confirm(`Encontradas ${importedData.length} entregas no backup. Deseja restaurar esses dados? (Itens repetidos não serão sobrescritos)`)) {
+            const tx = db.transaction(STORE_NAME, "readwrite");
+            const store = tx.objectStore(STORE_NAME);
+            
+            importedData.forEach(item => {
+              delete item.id; // Deixa o IndexedDB gerar IDs limpos para não colidir
+              store.add(item);
+            });
+
+            tx.oncomplete = () => {
+              alert("Backup restaurado com sucesso!");
+              renderDeliveries();
+            };
+          }
+        } catch (err) {
+          alert("Erro ao ler o arquivo de backup. Certifique-se de que é um arquivo .json válido.");
+        }
+      };
+      reader.readAsText(file);
+      event.target.value = ""; // Limpa para permitir reuso
+    }
+
+    // Inicialização
     window.addEventListener("DOMContentLoaded", async () => {
       await initDB();
       document.getElementById("deliveryDate").valueAsDate = new Date();
