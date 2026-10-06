@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Entregas Saboaria">
+  <title>Controle de Entregas - Saboaria</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --text: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --success: #16a34a;
+      --warning: #f59e0b;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 16px 16px 80px 16px;
+    }
+    h1, h2, h3 { margin: 0 0 12px 0; }
+    .header { margin-bottom: 20px; }
+    .header h1 { font-size: 22px; font-weight: 700; }
+    .header p { color: var(--muted); font-size: 14px; margin: 0; }
+
+    /* Dashboard */
+    .summary-card {
+      background: linear-gradient(135deg, #4f46e5, #6366f1);
+      color: white;
+      padding: 16px;
+      border-radius: 14px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
+    }
+    .summary-title { font-size: 13px; opacity: 0.9; text-transform: uppercase; letter-spacing: 0.5px; }
+    .summary-amount { font-size: 28px; font-weight: 800; margin: 6px 0; }
+    .summary-notes { font-size: 13px; opacity: 0.9; }
+
+    /* Formulário */
+    .form-card {
+      background: var(--card);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 24px;
+      border: 1px solid var(--border);
+    }
+    .tab-nav {
+      display: flex;
+      background: #eef2f6;
+      border-radius: 8px;
+      padding: 3px;
+      margin-bottom: 16px;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 8px;
+      border: none;
+      background: transparent;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 13px;
+      color: var(--muted);
+      cursor: pointer;
+    }
+    .tab-btn.active {
+      background: white;
+      color: var(--text);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .input-group { margin-bottom: 12px; }
+    label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; color: var(--muted); }
+    input, select, textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 15px;
+      background: white;
+      color: var(--text);
+    }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary); }
+    
+    /* Itens detalhados */
+    .item-row {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr auto;
+      gap: 6px;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .btn-del {
+      background: #fee2e2;
+      color: #dc2626;
+      border: none;
+      width: 34px;
+      height: 38px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .btn-add-item {
+      background: #f1f5f9;
+      color: var(--text);
+      border: 1px dashed var(--border);
+      padding: 8px;
+      border-radius: 8px;
+      font-size: 13px;
+      width: 100%;
+      cursor: pointer;
+      margin-bottom: 12px;
+    }
+
+    /* Foto */
+    .photo-input-container {
+      border: 1px dashed var(--border);
+      padding: 12px;
+      border-radius: 8px;
+      text-align: center;
+      background: #fafafa;
+    }
+    .photo-preview {
+      max-width: 100%;
+      height: 120px;
+      object-fit: cover;
+      border-radius: 6px;
+      margin-top: 8px;
+      display: none;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 12px;
+      width: 100%;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    /* Lista de entregas */
+    .filter-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .delivery-card {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 12px;
+      border: 1px solid var(--border);
+    }
+    .delivery-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+    .store-name { font-weight: 700; font-size: 16px; }
+    .delivery-date { font-size: 12px; color: var(--muted); }
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge-pending { background: #fef3c7; color: #b45309; }
+    .badge-paid { background: #dcfce7; color: #15803d; }
+    .badge-photo-only { background: #e0e7ff; color: #4338ca; }
+
+    .delivery-items {
+      font-size: 13px;
+      color: var(--muted);
+      border-top: 1px solid #f1f5f9;
+      padding-top: 8px;
+      margin-top: 8px;
+    }
+    .thumb {
+      width: 50px;
+      height: 50px;
+      object-fit: cover;
+      border-radius: 6px;
+      cursor: pointer;
+      border: 1px solid var(--border);
+    }
+    .card-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px solid #f1f5f9;
+    }
+    .btn-sm {
+      padding: 5px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      border: 1px solid var(--border);
+      background: white;
+      cursor: pointer;
+    }
+
+    /* Modal de foto */
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+      padding: 16px;
+    }
+    .modal img { max-width: 100%; max-height: 90vh; border-radius: 8px; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>Entregas Saboaria</h1>
+    <p>Registro de entregas e fechamentos</p>
+  </div>
+
+  <!-- Resumo Geral -->
+  <div class="summary-card">
+    <div class="summary-title">Total em Aberto (Calculado)</div>
+    <div class="summary-amount" id="sumPending">R$ 0,00</div>
+    <div class="summary-notes" id="sumPhotoCount">0 nota(s) registradas apenas por foto</div>
+  </div>
+
+  <!-- Formulário de Nova Entrega -->
+  <div class="form-card">
+    <div class="tab-nav">
+      <button class="tab-btn active" id="tabDetailed" onclick="setMode('detailed')">Com Valores</button>
+      <button class="tab-btn" id="tabPhoto" onclick="setMode('photo')">Só Foto da Nota</button>
+    </div>
+
+    <form id="deliveryForm">
+      <div class="input-group">
+        <label>Nome da Loja</label>
+        <input type="text" id="storeName" placeholder="Ex: Loja Alecrim" required>
+      </div>
+
+      <div class="input-group">
+        <label>Data da Entrega</label>
+        <input type="date" id="deliveryDate" required>
+      </div>
+
+      <!-- Seção detalhada de itens -->
+      <div id="detailedSection">
+        <label>Itens Entregues</label>
+        <div id="itemsContainer">
+          <!-- Linhas de produtos inseridas dinamicamente -->
+        </div>
+        <button type="button" class="btn-add-item" onclick="addItemRow()">+ Adicionar Produto</button>
+      </div>
+
+      <!-- Seção de Foto -->
+      <div class="input-group">
+        <label id="photoLabel">Foto da Nota / Canhoto (Opcional)</label>
+        <div class="photo-input-container">
+          <input type="file" id="photoInput" accept="image/*" capture="environment">
+          <img id="previewImg" class="photo-preview" alt="Preview">
+        </div>
+      </div>
+
+      <button type="submit" class="btn-primary" style="margin-top: 14px;">Salvar Entrega</button>
+    </form>
+  </div>
+
+  <!-- Filtro e Ações de Fechamento -->
+  <div class="filter-bar">
+    <select id="filterStore" onchange="renderDeliveries()">
+      <option value="">Todas as Lojas</option>
+    </select>
+    <button class="btn-sm" onclick="exportStoreReport()">📋 Copiar Fechamento</button>
+  </div>
+
+  <!-- Lista de Registros -->
+  <div id="deliveriesList"></div>
+
+  <!-- Visualizador de Imagem Grande -->
+  <div class="modal" id="imageModal" onclick="this.style.display='none'">
+    <img id="modalImg" src="" alt="Nota Ampliada">
+  </div>
+
+  <script>
+    // --- Banco de Dados IndexedDB (armazenamento persistente local no iPhone) ---
+    let db;
+    const DB_NAME = "SaboariaDeliveriesDB";
+    const STORE_NAME = "deliveries";
+
+    function initDB() {
+      return new Promise((resolve) => {
+        const req = indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = (e) => {
+          const database = e.target.result;
+          if (!database.objectStoreNames.contains(STORE_NAME)) {
+            database.createObjectStore(STORE_NAME, { keyPath: "id", autoIncrement: true });
+          }
+        };
+        req.onsuccess = (e) => {
+          db = e.target.result;
+          resolve();
+        };
+      });
+    }
+
+    function getAllDeliveries() {
+      return new Promise((resolve) => {
+        const tx = db.transaction(STORE_NAME, "readonly");
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.getAll();
+        req.onsuccess = () => resolve(req.result || []);
+      });
+    }
+
+    function addDelivery(data) {
+      return new Promise((resolve) => {
+        const tx = db.transaction(STORE_NAME, "readwrite");
+        const store = tx.objectStore(STORE_NAME);
+        store.add(data);
+        tx.oncomplete = () => resolve();
+      });
+    }
+
+    function updateDelivery(data) {
+      return new Promise((resolve) => {
+        const tx = db.transaction(STORE_NAME, "readwrite");
+        const store = tx.objectStore(STORE_NAME);
+        store.put(data);
+        tx.oncomplete = () => resolve();
+      });
+    }
+
+    function removeDelivery(id) {
+      return new Promise((resolve) => {
+        const tx = db.transaction(STORE_NAME, "readwrite");
+        const store = tx.objectStore(STORE_NAME);
+        store.delete(id);
+        tx.oncomplete = () => resolve();
+      });
+    }
+
+    // --- Controle de Estado e Interface ---
+    let currentMode = "detailed";
+    let currentBase64Image = null;
+
+    function setMode(mode) {
+      currentMode = mode;
+      const tabDetailed = document.getElementById("tabDetailed");
+      const tabPhoto = document.getElementById("tabPhoto");
+      const detailedSection = document.getElementById("detailedSection");
+      const photoLabel = document.getElementById("photoLabel");
+      const photoInput = document.getElementById("photoInput");
+
+      if (mode === "detailed") {
+        tabDetailed.classList.add("active");
+        tabPhoto.classList.remove("active");
+        detailedSection.style.display = "block";
+        photoLabel.innerText = "Foto da Nota / Canhoto (Opcional)";
+        photoInput.removeAttribute("required");
+      } else {
+        tabPhoto.classList.add("active");
+        tabDetailed.classList.remove("active");
+        detailedSection.style.display = "none";
+        photoLabel.innerText = "Foto da Nota / Canhoto (Obrigatório)";
+        photoInput.setAttribute("required", "true");
+      }
+    }
+
+    function addItemRow(desc = "", qty = 1, price = "") {
+      const container = document.getElementById("itemsContainer");
+      const row = document.createElement("div");
+      row.className = "item-row";
+      row.innerHTML = `
+        <input type="text" placeholder="Sabonete (ex: Lavanda)" value="${desc}" class="item-name" required>
+        <input type="number" placeholder="Qtd" value="${qty}" min="1" class="item-qty" required>
+        <input type="number" step="0.01" placeholder="R$" value="${price}" class="item-price" required>
+        <button type="button" class="btn-del" onclick="this.parentElement.remove()">×</button>
+      `;
+      container.appendChild(row);
+    }
+
+    // Leitura e compressão simples da foto para caber no armazenamento local
+    document.getElementById("photoInput").addEventListener("change", function(e) {
+      const file = e.target.files[0];
+      if (!file) {
+        currentBase64Image = null;
+        document.getElementById("previewImg").style.display = "none";
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const img = new Image();
+        img.onload = function() {
+          const canvas = document.createElement("canvas");
+          const ctx = canvas.getContext("2d");
+          const maxDim = 1200;
+          let w = img.width;
+          let h = img.height;
+          if (w > maxDim || h > maxDim) {
+            if (w > h) { h = Math.round((h * maxDim) / w); w = maxDim; }
+            else { w = Math.round((w * maxDim) / h); h = maxDim; }
+          }
+          canvas.width = w;
+          canvas.height = h;
+          ctx.drawImage(img, 0, 0, w, h);
+          currentBase64Image = canvas.toDataURL("image/jpeg", 0.8);
+          const preview = document.getElementById("previewImg");
+          preview.src = currentBase64Image;
+          preview.style.display = "block";
+        };
+        img.src = evt.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // Submissão do formulário
+    document.getElementById("deliveryForm").addEventListener("submit", async function(e) {
+      e.preventDefault();
+      const storeName = document.getElementById("storeName").value.trim();
+      const deliveryDate = document.getElementById("deliveryDate").value;
+
+      let items = [];
+      let total = 0;
+
+      if (currentMode === "detailed") {
+        const names = document.querySelectorAll(".item-name");
+        const qtys = document.querySelectorAll(".item-qty");
+        const prices = document.querySelectorAll(".item-price");
+
+        for (let i = 0; i < names.length; i++) {
+          const itemDesc = names[i].value.trim();
+          const quantity = parseFloat(qtys[i].value) || 0;
+          const unitPrice = parseFloat(prices[i].value) || 0;
+          const subtotal = quantity * unitPrice;
+          items.push({ desc: itemDesc, qty: quantity, unitPrice, subtotal });
+          total += subtotal;
+        }
+      }
+
+      const deliveryRecord = {
+        store: storeName,
+        date: deliveryDate,
+        mode: currentMode,
+        items: items,
+        total: total,
+        image: currentBase64Image,
+        status: "pending" // "pending" ou "paid"
+      };
+
+      await addDelivery(deliveryRecord);
+      this.reset();
+      document.getElementById("itemsContainer").innerHTML = "";
+      addItemRow();
+      document.getElementById("previewImg").style.display = "none";
+      currentBase64Image = null;
+      document.getElementById("deliveryDate").valueAsDate = new Date();
+
+      renderDeliveries();
+    });
+
+    // Alternar status pago/pendente
+    async function toggleStatus(id) {
+      const records = await getAllDeliveries();
+      const item = records.find(r => r.id === id);
+      if (item) {
+        item.status = item.status === "pending" ? "paid" : "pending";
+        await updateDelivery(item);
+        renderDeliveries();
+      }
+    }
+
+    async function deleteRecord(id) {
+      if (confirm("Deseja apagar este registro de entrega?")) {
+        await removeDelivery(id);
+        renderDeliveries();
+      }
+    }
+
+    function viewPhoto(src) {
+      document.getElementById("modalImg").src = src;
+      document.getElementById("imageModal").style.display = "flex";
+    }
+
+    // Renderização da lista
+    async function renderDeliveries() {
+      const deliveries = await getAllDeliveries();
+      deliveries.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+      const filterStore = document.getElementById("filterStore").value;
+      const listContainer = document.getElementById("deliveriesList");
+      listContainer.innerHTML = "";
+
+      // Atualiza select de lojas
+      const storeSelect = document.getElementById("filterStore");
+      const currentSelected = storeSelect.value;
+      const stores = [...new Set(deliveries.map(d => d.store))];
+      storeSelect.innerHTML = `<option value="">Todas as Lojas</option>` + 
+        stores.map(s => `<option value="${s}" ${s === currentSelected ? 'selected' : ''}>${s}</option>`).join("");
+
+      let pendingTotal = 0;
+      let pendingPhotoOnlyCount = 0;
+
+      const filtered = deliveries.filter(d => !filterStore || d.store === filterStore);
+
+      filtered.forEach(d => {
+        if (d.status === "pending") {
+          if (d.mode === "detailed") pendingTotal += d.total;
+          else pendingPhotoOnlyCount++;
+        }
+
+        const card = document.createElement("div");
+        card.className = "delivery-card";
+        const dateFormatted = d.date.split("-").reverse().join("/");
+
+        let itemsHtml = "";
+        if (d.mode === "detailed") {
+          itemsHtml = `<div><strong>Itens:</strong> ${d.items.map(i => `${i.qty}x${i.desc} (R$ ${(i.subtotal).toFixed(2)})`).join(", ")}</div>
+                       <div style="margin-top:4px; font-weight:700; color:var(--text);">Total: R$ ${d.total.toFixed(2)}</div>`;
+        } else {
+          itemsHtml = `<div style="font-style: italic;">Entrega gravada somente por foto (valores a calcular pela foto).</div>`;
+        }
+
+        card.innerHTML = `
+          <div class="delivery-header">
+            <div>
+              <div class="store-name">${d.store}</div>
+              <div class="delivery-date">${dateFormatted}</div>
+            </div>
+            <div>
+              <span class="badge ${d.status === 'pending' ? 'badge-pending' : 'badge-paid'}">
+                ${d.status === 'pending' ? 'Em aberto' : 'Pago'}
+              </span>
+              ${d.mode === 'photo' ? '<span class="badge badge-photo-only">Foto</span>' : ''}
+            </div>
+          </div>
+          <div class="delivery-items">
+            ${itemsHtml}
+          </div>
+          ${d.image ? `<div style="margin-top:8px;"><img src="${d.image}" class="thumb" onclick="viewPhoto('${d.image}')" alt="Canhoto"></div>` : ''}
+          <div class="card-actions">
+            <button class="btn-sm" onclick="toggleStatus(${d.id})">${d.status === 'pending' ? 'Marcar como Pago' : 'Reabrir'}</button>
+            <button class="btn-sm" style="color:#dc2626;" onclick="deleteRecord(${d.id})">Excluir</button>
+          </div>
+        `;
+        listContainer.appendChild(card);
+      });
+
+      document.getElementById("sumPending").innerText = `R$ ${pendingTotal.toFixed(2).replace('.', ',')}`;
+      document.getElementById("sumPhotoCount").innerText = `${pendingPhotoOnlyCount} nota(s) em aberto registradas só por foto`;
+    }
+
+    // Copiar relatório formatado em texto para WhatsApp
+    async function exportStoreReport() {
+      const deliveries = await getAllDeliveries();
+      const filterStore = document.getElementById("filterStore").value;
+      const targetDeliveries = deliveries.filter(d => (!filterStore || d.store === filterStore) && d.status === "pending");
+
+      if (targetDeliveries.length === 0) {
+        alert("Nenhuma entrega em aberto para esta seleção.");
+        return;
+      }
+
+      let text = `📦 *RESUMO DE ENTREGAS PENDENTES*\n`;
+      text += `Loja: ${filterStore || "Geral"}\n`;
+      text += `Data: ${new Date().toLocaleDateString('pt-BR')}\n`;
+      text += `------------------------------------\n\n`;
+
+      let totalCalculado = 0;
+      let fotosManuais = 0;
+
+      targetDeliveries.forEach((d, idx) => {
+        const dateFormatted = d.date.split("-").reverse().join("/");
+        text += `*Entrega ${idx + 1}* (${dateFormatted})\n`;
+        if (d.mode === "detailed") {
+          d.items.forEach(i => {
+            text += ` • ${i.qty}x ${i.desc} - R$ ${i.subtotal.toFixed(2)}\n`;
+          });
+          text += ` Subtotal: R$ ${d.total.toFixed(2)}\n\n`;
+          totalCalculado += d.total;
+        } else {
+          text += ` • Nota registrada por foto (conferência física pendente)\n\n`;
+          fotosManuais++;
+        }
+      });
+
+      text += `------------------------------------\n`;
+      text += `*TOTAL CALCULADO:* R$ ${totalCalculado.toFixed(2)}\n`;
+      if (fotosManuais > 0) {
+        text += `⚠️ Existem ${fotosManuais} nota(s) anexadas por foto a somar.\n`;
+      }
+
+      navigator.clipboard.writeText(text).then(() => {
+        alert("Resumo copiado com sucesso! Agora é só colar no WhatsApp da loja.");
+      }).catch(() => {
+        prompt("Copie o texto abaixo:", text);
+      });
+    }
+
+    // Inicialização padrão
+    window.addEventListener("DOMContentLoaded", async () => {
+      await initDB();
+      document.getElementById("deliveryDate").valueAsDate = new Date();
+      addItemRow();
+      renderDeliveries();
+    });
+  </script>
+</body>
+</html>
